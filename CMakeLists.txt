@@ -199,12 +199,13 @@ set(Launcher_VERSION_NAME4_COMMA "${Launcher_VERSION_MAJOR},${Launcher_VERSION_M
 # Build platform.
 set(Launcher_BUILD_PLATFORM "unknown" CACHE STRING "A short string identifying the platform that this build was built for. Only used to display in the about dialog.")
 
-# Github repo URL with releases for updater - left blank until Phase 4 (self-update) wires up a real
-# TowerCraft Launcher releases repo; blank cleanly disables the updater (see root Launcher_ENABLE_UPDATER).
-set(Launcher_UPDATER_GITHUB_REPO "" CACHE STRING "Base github URL for the updater.")
+# Github repo URL with releases for updater - TowerCraft Launcher's own source+releases repo.
+set(Launcher_UPDATER_GITHUB_REPO "https://github.com/Sinaye78/towercraft-launcher" CACHE STRING "Base github URL for the updater.")
 
-# Name to help updater identify valid artifacts
-set(Launcher_BUILD_ARTIFACT "" CACHE STRING "Artifact name to help the updater identify valid artifacts.")
+# Name to help updater identify valid artifacts - matched as a lowercase substring against release
+# asset filenames (see launcher/updater/prismupdater/PrismUpdater.cpp:validReleaseArtifacts). Ship
+# release assets named e.g. "TowerCraftLauncher-Windows-CLANG64-Portable.zip".
+set(Launcher_BUILD_ARTIFACT "Windows-CLANG64" CACHE STRING "Artifact name to help the updater identify valid artifacts.")
 
 # The metadata server - kept pointing at Prism Launcher's public meta server: this is the shared
 # community index of Minecraft/Fabric/Forge version metadata that the download engine depends on,
