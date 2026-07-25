@@ -105,7 +105,6 @@ class Application : public QApplication {
         None = 0,
 
         SupportsMSA = 1 << 0,
-        SupportsFlame = 1 << 1,
         SupportsGameMode = 1 << 2,
         SupportsMangoHud = 1 << 3,
     };
@@ -164,8 +163,6 @@ class Application : public QApplication {
     QString getJarPath(QString jarFile);
 
     QString getMSAClientID();
-    QString getFlameAPIKey();
-    QString getModrinthAPIToken();
     QString getUserAgent();
 
     /// this is the root of the 'installation'. Used for automatic updates
@@ -221,6 +218,11 @@ class Application : public QApplication {
                 const QString& offlineName = QString());
     bool kill(BaseInstance* instance);
     void closeCurrentWindow();
+
+    /** The LaunchController currently running the given instance, or nullptr if it isn't running.
+     *  Lets a UI (e.g. the dashboard) hook the Task signals of an in-progress launch without going
+     *  through a ProgressDialog/InstanceWindow. */
+    LaunchController* launchController(BaseInstance* instance) const;
 
    private slots:
     void on_windowClose();

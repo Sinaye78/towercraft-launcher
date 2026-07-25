@@ -30,8 +30,6 @@ set(CORE_SOURCES
     archive/ArchiveReader.h
     archive/ArchiveWriter.cpp
     archive/ArchiveWriter.h
-    archive/ExportToZipTask.cpp
-    archive/ExportToZipTask.h
     archive/ExtractZipTask.cpp
     archive/ExtractZipTask.h
     StringUtils.h
@@ -43,16 +41,8 @@ set(CORE_SOURCES
     # Basic instance manipulation tasks (derived from InstanceTask)
     InstanceCreationTask.h
     InstanceCreationTask.cpp
-    InstanceCopyPrefs.h
-    InstanceCopyPrefs.cpp
-    InstanceCopyTask.h
-    InstanceCopyTask.cpp
     InstanceImportTask.h
     InstanceImportTask.cpp
-
-    # Resource downloading task
-    ResourceDownloadTask.h
-    ResourceDownloadTask.cpp
 
     # Use tracking separate from memory management
     Usable.h
@@ -354,8 +344,6 @@ set(MINECRAFT_SOURCES
     minecraft/mod/tasks/ResourceFolderLoadTask.cpp
     minecraft/mod/tasks/LocalModParseTask.h
     minecraft/mod/tasks/LocalModParseTask.cpp
-    minecraft/mod/tasks/LocalResourceUpdateTask.h
-    minecraft/mod/tasks/LocalResourceUpdateTask.cpp
     minecraft/mod/tasks/LocalDataPackParseTask.h
     minecraft/mod/tasks/LocalDataPackParseTask.cpp
     minecraft/mod/tasks/LocalTexturePackParseTask.h
@@ -366,8 +354,6 @@ set(MINECRAFT_SOURCES
     minecraft/mod/tasks/LocalWorldSaveParseTask.cpp
     minecraft/mod/tasks/LocalResourceParse.h
     minecraft/mod/tasks/LocalResourceParse.cpp
-    minecraft/mod/tasks/GetModDependenciesTask.h
-    minecraft/mod/tasks/GetModDependenciesTask.cpp
 
     # Assets
     minecraft/AssetsUtils.h
@@ -494,101 +480,16 @@ set(API_SOURCES
     modplatform/ResourceType.h
     modplatform/ResourceType.cpp
 
-    modplatform/ResourceAPI.h
-    modplatform/ResourceAPI.cpp
-
-    modplatform/EnsureMetadataTask.h
-    modplatform/EnsureMetadataTask.cpp
-
-    modplatform/CheckUpdateTask.h
-
-    modplatform/flame/FlameAPI.h
-    modplatform/flame/FlameAPI.cpp
-    modplatform/modrinth/ModrinthAPI.h
-    modplatform/modrinth/ModrinthAPI.cpp
     modplatform/helpers/HashUtils.h
     modplatform/helpers/HashUtils.cpp
-    modplatform/helpers/OverrideUtils.h
-    modplatform/helpers/OverrideUtils.cpp
 
     modplatform/helpers/ExportToModList.h
     modplatform/helpers/ExportToModList.cpp
 )
 
-set(FTB_SOURCES
-    modplatform/legacy_ftb/PackFetchTask.h
-    modplatform/legacy_ftb/PackFetchTask.cpp
-    modplatform/legacy_ftb/PackInstallTask.h
-    modplatform/legacy_ftb/PackInstallTask.cpp
-    modplatform/legacy_ftb/PrivatePackManager.h
-    modplatform/legacy_ftb/PrivatePackManager.cpp
-
-    modplatform/legacy_ftb/PackHelpers.h
-
-    modplatform/import_ftb/PackInstallTask.h
-    modplatform/import_ftb/PackInstallTask.cpp
-    modplatform/import_ftb/PackHelpers.h
-    modplatform/import_ftb/PackHelpers.cpp
-
-    modplatform/ftb/FTBPackInstallTask.h
-    modplatform/ftb/FTBPackInstallTask.cpp
-    modplatform/ftb/FTBPackManifest.h
-    modplatform/ftb/FTBPackManifest.cpp
-)
-
-set(FLAME_SOURCES
-    # Flame
-    modplatform/flame/FlameModIndex.cpp
-    modplatform/flame/FlameModIndex.h
-    modplatform/flame/PackManifest.h
-    modplatform/flame/PackManifest.cpp
-    modplatform/flame/FileResolvingTask.h
-    modplatform/flame/FileResolvingTask.cpp
-    modplatform/flame/FlameCheckUpdate.cpp
-    modplatform/flame/FlameCheckUpdate.h
-    modplatform/flame/FlameInstanceCreationTask.h
-    modplatform/flame/FlameInstanceCreationTask.cpp
-    modplatform/flame/FlamePackExportTask.h
-    modplatform/flame/FlamePackExportTask.cpp
-)
-
-set(MODRINTH_SOURCES
-    modplatform/modrinth/ModrinthPackIndex.cpp
-    modplatform/modrinth/ModrinthPackIndex.h
-    modplatform/modrinth/ModrinthCheckUpdate.cpp
-    modplatform/modrinth/ModrinthCheckUpdate.h
-    modplatform/modrinth/ModrinthInstanceCreationTask.cpp
-    modplatform/modrinth/ModrinthInstanceCreationTask.h
-    modplatform/modrinth/ModrinthPackExportTask.cpp
-    modplatform/modrinth/ModrinthPackExportTask.h
-)
-
 set(PACKWIZ_SOURCES
     modplatform/packwiz/Packwiz.h
     modplatform/packwiz/Packwiz.cpp
-)
-
-
-set(TECHNIC_SOURCES
-    modplatform/technic/SingleZipPackInstallTask.h
-    modplatform/technic/SingleZipPackInstallTask.cpp
-    modplatform/technic/SolderPackInstallTask.h
-    modplatform/technic/SolderPackInstallTask.cpp
-    modplatform/technic/SolderPackManifest.h
-    modplatform/technic/SolderPackManifest.cpp
-    modplatform/technic/TechnicPackProcessor.h
-    modplatform/technic/TechnicPackProcessor.cpp
-)
-
-set(ATLAUNCHER_SOURCES
-    modplatform/atlauncher/ATLPackIndex.cpp
-    modplatform/atlauncher/ATLPackIndex.h
-    modplatform/atlauncher/ATLPackInstallTask.cpp
-    modplatform/atlauncher/ATLPackInstallTask.h
-    modplatform/atlauncher/ATLPackManifest.cpp
-    modplatform/atlauncher/ATLPackManifest.h
-    modplatform/atlauncher/ATLShareCode.cpp
-    modplatform/atlauncher/ATLShareCode.h
 )
 
 set(LINKEXE_SOURCES
@@ -775,12 +676,7 @@ set(LOGIC_SOURCES
     ${META_SOURCES}
     ${ICONS_SOURCES}
     ${API_SOURCES}
-    ${FTB_SOURCES}
-    ${FLAME_SOURCES}
-    ${MODRINTH_SOURCES}
     ${PACKWIZ_SOURCES}
-    ${TECHNIC_SOURCES}
-    ${ATLAUNCHER_SOURCES}
 )
 
 if(APPLE AND Launcher_ENABLE_UPDATER)
@@ -832,6 +728,12 @@ SET(LAUNCHER_SOURCES
     ui/GuiUtil.cpp
     ui/MainWindow.h
     ui/MainWindow.cpp
+    ui/TowerCraftDashboardWidget.h
+    ui/TowerCraftDashboardWidget.cpp
+    towercraft/TowerCraftEnsureInstanceTask.h
+    towercraft/TowerCraftEnsureInstanceTask.cpp
+    towercraft/TowerCraftManifestSyncTask.h
+    towercraft/TowerCraftManifestSyncTask.cpp
     ui/InstanceWindow.h
     ui/InstanceWindow.cpp
     ui/ViewLogWindow.h
@@ -942,105 +844,19 @@ SET(LAUNCHER_SOURCES
     # GUI - global settings pages
     ui/pages/global/AccountListPage.cpp
     ui/pages/global/AccountListPage.h
-    ui/pages/global/ExternalToolsPage.cpp
-    ui/pages/global/ExternalToolsPage.h
     ui/pages/global/JavaPage.cpp
     ui/pages/global/JavaPage.h
-    ui/pages/global/LanguagePage.cpp
-    ui/pages/global/LanguagePage.h
     ui/pages/global/MinecraftPage.h
     ui/pages/global/LauncherPage.cpp
     ui/pages/global/LauncherPage.h
     ui/pages/global/AppearancePage.h
-    ui/pages/global/ProxyPage.cpp
-    ui/pages/global/ProxyPage.h
-    ui/pages/global/APIPage.cpp
-    ui/pages/global/APIPage.h
 
     # GUI - platform pages
     ui/pages/modplatform/CustomPage.cpp
     ui/pages/modplatform/CustomPage.h
 
-    ui/pages/modplatform/ResourcePage.cpp
-    ui/pages/modplatform/ResourcePage.h
-    ui/pages/modplatform/ResourceModel.cpp
-    ui/pages/modplatform/ResourceModel.h
-
-    ui/pages/modplatform/ModPage.cpp
-    ui/pages/modplatform/ModPage.h
-    ui/pages/modplatform/ModModel.cpp
-    ui/pages/modplatform/ModModel.h
-
-    ui/pages/modplatform/ResourcePackPage.cpp
-    ui/pages/modplatform/ResourcePackModel.cpp
-
-    # Needed for MOC to find them without a corresponding .cpp
-    ui/pages/modplatform/TexturePackPage.h
-    ui/pages/modplatform/TexturePackModel.cpp
-
-    ui/pages/modplatform/ShaderPackPage.cpp
-    ui/pages/modplatform/ShaderPackModel.cpp
-
-    ui/pages/modplatform/DataPackPage.cpp
-    ui/pages/modplatform/DataPackModel.cpp
-
-    ui/pages/modplatform/ModpackProviderBasePage.h
-
-    ui/pages/modplatform/atlauncher/AtlFilterModel.cpp
-    ui/pages/modplatform/atlauncher/AtlFilterModel.h
-    ui/pages/modplatform/atlauncher/AtlListModel.cpp
-    ui/pages/modplatform/atlauncher/AtlListModel.h
-    ui/pages/modplatform/atlauncher/AtlOptionalModDialog.cpp
-    ui/pages/modplatform/atlauncher/AtlOptionalModDialog.h
-    ui/pages/modplatform/atlauncher/AtlPage.cpp
-    ui/pages/modplatform/atlauncher/AtlPage.h
-    ui/pages/modplatform/atlauncher/AtlUserInteractionSupportImpl.cpp
-    ui/pages/modplatform/atlauncher/AtlUserInteractionSupportImpl.h
-
-    ui/pages/modplatform/ftb/FtbFilterModel.cpp
-    ui/pages/modplatform/ftb/FtbFilterModel.h
-    ui/pages/modplatform/ftb/FtbListModel.cpp
-    ui/pages/modplatform/ftb/FtbListModel.h
-    ui/pages/modplatform/ftb/FtbPage.cpp
-    ui/pages/modplatform/ftb/FtbPage.h
-
-    ui/pages/modplatform/legacy_ftb/Page.cpp
-    ui/pages/modplatform/legacy_ftb/Page.h
-    ui/pages/modplatform/legacy_ftb/ListModel.h
-    ui/pages/modplatform/legacy_ftb/ListModel.cpp
-
-    ui/pages/modplatform/import_ftb/ImportFTBPage.cpp
-    ui/pages/modplatform/import_ftb/ImportFTBPage.h
-    ui/pages/modplatform/import_ftb/ListModel.h
-    ui/pages/modplatform/import_ftb/ListModel.cpp
-
-    ui/pages/modplatform/flame/FlameModel.cpp
-    ui/pages/modplatform/flame/FlameModel.h
-    ui/pages/modplatform/flame/FlamePage.cpp
-    ui/pages/modplatform/flame/FlamePage.h
-    ui/pages/modplatform/flame/FlameResourceModels.cpp
-    ui/pages/modplatform/flame/FlameResourceModels.h
-    ui/pages/modplatform/flame/FlameResourcePages.cpp
-    ui/pages/modplatform/flame/FlameResourcePages.h
-
-    ui/pages/modplatform/modrinth/ModrinthPage.cpp
-    ui/pages/modplatform/modrinth/ModrinthPage.h
-    ui/pages/modplatform/modrinth/ModrinthModel.cpp
-    ui/pages/modplatform/modrinth/ModrinthModel.h
-
-    ui/pages/modplatform/technic/TechnicModel.cpp
-    ui/pages/modplatform/technic/TechnicModel.h
-    ui/pages/modplatform/technic/TechnicPage.cpp
-    ui/pages/modplatform/technic/TechnicPage.h
-
     ui/pages/modplatform/ImportPage.cpp
     ui/pages/modplatform/ImportPage.h
-
-    ui/pages/modplatform/OptionalModDialog.cpp
-    ui/pages/modplatform/OptionalModDialog.h
-
-    ui/pages/modplatform/modrinth/ModrinthResourcePages.cpp
-    ui/pages/modplatform/modrinth/ModrinthResourcePages.h
 
     # GUI - dialogs
     ui/dialogs/AboutDialog.cpp
@@ -1049,16 +865,10 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/ProfileSelectDialog.h
     ui/dialogs/ProfileSetupDialog.cpp
     ui/dialogs/ProfileSetupDialog.h
-    ui/dialogs/CopyInstanceDialog.cpp
-    ui/dialogs/CopyInstanceDialog.h
     ui/dialogs/CreateShortcutDialog.cpp
     ui/dialogs/CreateShortcutDialog.h
     ui/dialogs/CustomMessageBox.cpp
     ui/dialogs/CustomMessageBox.h
-    ui/dialogs/ExportInstanceDialog.cpp
-    ui/dialogs/ExportInstanceDialog.h
-    ui/dialogs/ExportPackDialog.cpp
-    ui/dialogs/ExportPackDialog.h
     ui/dialogs/ExportToModListDialog.cpp
     ui/dialogs/ExportToModListDialog.h
     ui/dialogs/IconPickerDialog.cpp
@@ -1083,16 +893,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/ReviewMessageBox.h
     ui/dialogs/VersionSelectDialog.cpp
     ui/dialogs/VersionSelectDialog.h
-    ui/dialogs/ResourceDownloadDialog.cpp
-    ui/dialogs/ResourceDownloadDialog.h
     ui/dialogs/ScrollMessageBox.cpp
     ui/dialogs/ScrollMessageBox.h
-    ui/dialogs/BlockedModsDialog.cpp
-    ui/dialogs/BlockedModsDialog.h
-    ui/dialogs/ChooseProviderDialog.h
-    ui/dialogs/ChooseProviderDialog.cpp
-    ui/dialogs/ResourceUpdateDialog.cpp
-    ui/dialogs/ResourceUpdateDialog.h
     ui/dialogs/InstallLoaderDialog.cpp
     ui/dialogs/InstallLoaderDialog.h
     ui/dialogs/ChooseOfflineNameDialog.cpp
@@ -1129,8 +931,6 @@ SET(LAUNCHER_SOURCES
     ui/widgets/LogView.h
     ui/widgets/InfoFrame.cpp
     ui/widgets/InfoFrame.h
-    ui/widgets/ModFilterWidget.cpp
-    ui/widgets/ModFilterWidget.h
     ui/widgets/ModListView.cpp
     ui/widgets/ModListView.h
     ui/widgets/PageContainer.cpp

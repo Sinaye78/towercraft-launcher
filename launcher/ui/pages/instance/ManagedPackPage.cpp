@@ -7,7 +7,6 @@
 #include <QLineEdit>
 #include <QUrl>
 #include <QUrlQuery>
-#include "modplatform/ModIndex.h"
 #include "ui_ManagedPackPage.h"
 
 #include <QFileDialog>
@@ -79,13 +78,8 @@ class NoBigComboBoxStyle : public QProxyStyle {
     NoBigComboBoxStyle(QStyle* style) : QProxyStyle(style) {}
 };
 
-ManagedPackPage* ManagedPackPage::createPage(BaseInstance* inst, QString type, QWidget* parent)
+ManagedPackPage* ManagedPackPage::createPage(BaseInstance* inst, [[maybe_unused]] QString type, QWidget* parent)
 {
-    if (type == "modrinth")
-        return new ModrinthManagedPackPage(inst, nullptr, parent);
-    if (type == "flame" && (APPLICATION->capabilities() & Application::SupportsFlame))
-        return new FlameManagedPackPage(inst, nullptr, parent);
-
     return new GenericManagedPackPage(inst, nullptr, parent);
 }
 
@@ -117,8 +111,7 @@ ManagedPackPage::ManagedPackPage(BaseInstance* inst, InstanceWindow* instance_wi
 
     connect(ui->changelogTextBrowser, &QTextBrowser::anchorClicked, this, [](const QUrl url) {
         if (url.scheme().isEmpty()) {
-            auto querry =
-                QUrlQuery(url.query()).queryItemValue("remoteUrl", QUrl::FullyDecoded);  // curseforge workaround for linkout?remoteUrl=
+            auto querry = QUrlQuery(url.query()).queryItemValue("remoteUrl", QUrl::FullyDecoded);
             auto decoded = QUrl::fromPercentEncoding(querry.toUtf8());
             auto newUrl = QUrl(decoded);
             if (newUrl.isValid() && (newUrl.scheme() == "http" || newUrl.scheme() == "https"))
@@ -171,8 +164,6 @@ QString ManagedPackPage::displayName() const
     auto type = m_inst->getManagedPackType();
     if (type.isEmpty())
         return {};
-    if (type == "flame")
-        type = "CurseForge";
     return type.replace(0, 1, type[0].toUpper());
 }
 
@@ -246,91 +237,6 @@ void ManagedPackPage::setFailState()
     ui->reloadButton->setVisible(true);
 }
 
-ModrinthManagedPackPage::ModrinthManagedPackPage(BaseInstance* inst, InstanceWindow* instance_window, QWidget* parent)
-    : ManagedPackPage(inst, instance_window, parent)
-{
-    Q_ASSERT(inst->isManagedPack());
-    connect(ui->versionsComboBox, &QComboBox::currentIndexChanged, this, &ModrinthManagedPackPage::suggestVersion);
-    connect(ui->updateButton, &QPushButton::clicked, this, &ModrinthManagedPackPage::update);
-    connect(ui->updateFromFileButton, &QPushButton::clicked, this, &ModrinthManagedPackPage::updateFromFile);
-}
-
-// MODRINTH
-void ModrinthManagedPackPage::parseManagedPack()
-{
-    qDebug() << "Parsing Modrinth pack";
-
-    // No need for the extra work because we already have everything we need.
-    if (m_loaded) {
-        return;
-    }
-
-    if (m_fetch_job && m_fetch_job->isRunning()) {
-        m_fetch_job->abort();
-    }
-
-    ResourceAPI::Callback<QVector<ModPlatform::IndexedVersion>> callbacks{};
-    m_pack = { .addonId = m_inst->getManagedPackID() };
-
-    // Use default if no callbacks are set
-    callbacks.on_succeed = [this](auto& doc) {
-        m_pack.versions = doc;
-        m_pack.versionsLoaded = true;
-
-        // We block signals here so that suggestVersion() doesn't get called, causing an assertion fail.
-        ui->versionsComboBox->blockSignals(true);
-        ui->versionsComboBox->clear();
-        ui->versionsComboBox->blockSignals(false);
-
-        for (const auto& version : m_pack.versions) {
-            QString name = version.getVersionDisplayString();
-
-            // NOTE: the id from version isn't the same id in the modpack format spec...
-            // e.g. HexMC's 4.4.0 has versionId 4.0.0 in the modpack index..............
-            if (version.version == m_inst->getManagedPackVersionName()) {
-                name = tr("%1 (Current)").arg(name);
-            }
-
-            ui->versionsComboBox->addItem(name, version.fileId);
-        }
-
-        suggestVersion();
-
-        m_loaded = true;
-    };
-    callbacks.on_fail = [this](const QString& /*reason*/, int) { setFailState(); };
-    callbacks.on_abort = [this]() { setFailState(); };
-    m_fetch_job = m_api.getProjectVersions({ .pack = std::make_shared<ModPlatform::IndexedPack>(m_pack),
-                                             .mcVersions = {},
-                                             .loaders = {},
-                                             .resourceType = ModPlatform::ResourceType::Modpack,
-                                             .includeChangelog = true },
-                                           std::move(callbacks));
-
-    ui->changelogTextBrowser->setText(tr("Fetching changelogs..."));
-
-    m_fetch_job->start();
-}
-
-QString ModrinthManagedPackPage::url() const
-{
-    return "https://modrinth.com/mod/" + m_inst->getManagedPackID();
-}
-
-void ModrinthManagedPackPage::suggestVersion()
-{
-    auto index = ui->versionsComboBox->currentIndex();
-    if (m_pack.versions.length() == 0) {
-        setFailState();
-        return;
-    }
-    auto version = m_pack.versions.at(index);
-
-    ui->changelogTextBrowser->setHtml(StringUtils::htmlListPatch(markdownToHTML(version.changelog.toUtf8())));
-
-    ManagedPackPage::suggestVersion();
-}
-
 /// @brief Called when the update task has completed.
 /// Internally handles the closing of the instance window if the update was successful and shows a message box.
 /// @param did_succeed Whether the update task was successful.
@@ -353,161 +259,6 @@ void ManagedPackPage::onUpdateTaskCompleted(bool did_succeed) const
             QMessageBox::Critical)
             ->show();
     }
-}
-
-void ModrinthManagedPackPage::update()
-{
-    auto customURL = m_inst->settings()->get("ManagedPackURL").toString().trimmed();
-    if (m_inst->getManagedPackID().isEmpty() && !customURL.isEmpty()) {
-        updatePack(customURL);
-        return;
-    }
-    auto index = ui->versionsComboBox->currentIndex();
-    if (m_pack.versions.length() == 0) {
-        setFailState();
-        return;
-    }
-    auto version = m_pack.versions.at(index);
-
-    updatePack(version.downloadUrl, version.fileId.toString(), version.version);
-}
-
-void ModrinthManagedPackPage::updateFromFile()
-{
-    auto output = QFileDialog::getOpenFileUrl(this, tr("Choose update file"), QDir::homePath(), tr("Modrinth pack") + " (*.mrpack *.zip)");
-    if (output.isEmpty())
-        return;
-
-    updatePack(output);
-}
-
-// FLAME
-FlameManagedPackPage::FlameManagedPackPage(BaseInstance* inst, InstanceWindow* instance_window, QWidget* parent)
-    : ManagedPackPage(inst, instance_window, parent)
-{
-    Q_ASSERT(inst->isManagedPack());
-    connect(ui->versionsComboBox, &QComboBox::currentIndexChanged, this, &FlameManagedPackPage::suggestVersion);
-    connect(ui->updateButton, &QPushButton::clicked, this, &FlameManagedPackPage::update);
-    connect(ui->updateFromFileButton, &QPushButton::clicked, this, &FlameManagedPackPage::updateFromFile);
-}
-
-void FlameManagedPackPage::parseManagedPack()
-{
-    qDebug() << "Parsing Flame pack";
-
-    // We need to tell the user to redownload the pack, since we didn't save the required info previously
-    if (m_inst->getManagedPackID().isEmpty()) {
-        setFailState();
-        QString message =
-            tr("<h1>Hey there!</h1>"
-               "<h4>"
-               "It seems like your Pack ID is null. This is because of a bug in older versions of the launcher.<br/>"
-               "Unfortunately, we can't do the proper API requests without this information.<br/>"
-               "<br/>"
-               "So, in order for this feature to work, you will need to re-download the modpack from the built-in downloader.<br/>"
-               "<br/>"
-               "Don't worry though, it will ask you to update this instance instead, so you'll not lose this instance!"
-               "</h4>");
-
-        ui->changelogTextBrowser->setHtml(StringUtils::htmlListPatch(message));
-        return;
-    }
-
-    // No need for the extra work because we already have everything we need.
-    if (m_loaded) {
-        return;
-    }
-
-    if (m_fetch_job && m_fetch_job->isRunning()) {
-        m_fetch_job->abort();
-    }
-
-    QString id = m_inst->getManagedPackID();
-    m_pack = { .addonId = id };
-
-    ResourceAPI::Callback<QVector<ModPlatform::IndexedVersion>> callbacks{};
-
-    // Use default if no callbacks are set
-    callbacks.on_succeed = [this](auto& doc) {
-        m_pack.versions = doc;
-        m_pack.versionsLoaded = true;
-
-        // We block signals here so that suggestVersion() doesn't get called, causing an assertion fail.
-        ui->versionsComboBox->blockSignals(true);
-        ui->versionsComboBox->clear();
-        ui->versionsComboBox->blockSignals(false);
-
-        for (const auto& version : m_pack.versions) {
-            QString name = version.getVersionDisplayString();
-
-            if (version.fileId == m_inst->getManagedPackVersionID().toInt()) {
-                name = tr("%1 (Current)").arg(name);
-            }
-
-            ui->versionsComboBox->addItem(name, QVariant(version.fileId));
-        }
-
-        suggestVersion();
-
-        m_loaded = true;
-    };
-    callbacks.on_fail = [this](const QString& /*reason*/, int) { setFailState(); };
-    callbacks.on_abort = [this]() { setFailState(); };
-    m_fetch_job = m_api.getProjectVersions({ .pack = std::make_shared<ModPlatform::IndexedPack>(m_pack),
-                                             .mcVersions = {},
-                                             .loaders = {},
-                                             .resourceType = ModPlatform::ResourceType::Modpack,
-                                             .includeChangelog = true },
-                                           std::move(callbacks));
-
-    m_fetch_job->start();
-}
-
-QString FlameManagedPackPage::url() const
-{
-    // FIXME: We should display the websiteUrl field, but this requires doing the API request first :(
-    return "https://www.curseforge.com/projects/" + m_inst->getManagedPackID();
-}
-
-void FlameManagedPackPage::suggestVersion()
-{
-    auto index = ui->versionsComboBox->currentIndex();
-    if (m_pack.versions.length() == 0) {
-        setFailState();
-        return;
-    }
-    auto version = m_pack.versions.at(index);
-
-    ui->changelogTextBrowser->setHtml(
-        StringUtils::htmlListPatch(m_api.getModFileChangelog(m_inst->getManagedPackID().toInt(), version.fileId.toInt())));
-
-    ManagedPackPage::suggestVersion();
-}
-
-void FlameManagedPackPage::update()
-{
-    auto customURL = m_inst->settings()->get("ManagedPackURL").toString().trimmed();
-    if (m_inst->getManagedPackID().isEmpty() && !customURL.isEmpty()) {
-        updatePack(customURL);
-        return;
-    }
-    auto index = ui->versionsComboBox->currentIndex();
-    if (m_pack.versions.length() == 0) {
-        setFailState();
-        return;
-    }
-    auto version = m_pack.versions.at(index);
-
-    updatePack(version.downloadUrl, version.fileId.toString());
-}
-
-void FlameManagedPackPage::updateFromFile()
-{
-    auto output = QFileDialog::getOpenFileUrl(this, tr("Choose update file"), QDir::homePath(), tr("CurseForge pack") + " (*.zip)");
-    if (output.isEmpty())
-        return;
-
-    updatePack(output);
 }
 
 void ManagedPackPage::updatePack(const QUrl& url, QString versionID, QString versionName)

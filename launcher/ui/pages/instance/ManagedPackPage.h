@@ -6,11 +6,6 @@
 
 #include "BaseInstance.h"
 
-#include "modplatform/ModIndex.h"
-#include "modplatform/modrinth/ModrinthAPI.h"
-
-#include "modplatform/flame/FlameAPI.h"
-
 #include "net/NetJob.h"
 
 #include "ui/pages/BasePage.h"
@@ -111,52 +106,4 @@ class GenericManagedPackPage final : public ManagedPackPage {
 
     // TODO: We may want to show this page with some useful info at some point.
     bool shouldDisplay() const override { return false; };
-};
-
-class ModrinthManagedPackPage final : public ManagedPackPage {
-    Q_OBJECT
-
-   public:
-    ModrinthManagedPackPage(BaseInstance* inst, InstanceWindow* instance_window, QWidget* parent = nullptr);
-    ~ModrinthManagedPackPage() override = default;
-
-    void parseManagedPack() override;
-    QString url() const override;
-    QString helpPage() const override { return "modrinth-managed-pack"; }
-
-   public slots:
-    void suggestVersion() override;
-
-    void update() override;
-    void updateFromFile() override;
-
-   private:
-    Task::Ptr m_fetch_job = nullptr;
-
-    ModPlatform::IndexedPack m_pack;
-    ModrinthAPI m_api;
-};
-
-class FlameManagedPackPage final : public ManagedPackPage {
-    Q_OBJECT
-
-   public:
-    FlameManagedPackPage(BaseInstance* inst, InstanceWindow* instance_window, QWidget* parent = nullptr);
-    ~FlameManagedPackPage() override = default;
-
-    void parseManagedPack() override;
-    QString url() const override;
-    QString helpPage() const override { return "curseforge-managed-pack"; }
-
-   public slots:
-    void suggestVersion() override;
-
-    void update() override;
-    void updateFromFile() override;
-
-   private:
-    Task::Ptr m_fetch_job = nullptr;
-
-    ModPlatform::IndexedPack m_pack;
-    FlameAPI m_api;
 };

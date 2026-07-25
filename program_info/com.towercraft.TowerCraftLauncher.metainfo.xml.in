@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>@Launcher_AppID@</id>
+  <name>TowerCraft Launcher</name>
+  <summary>Dedicated launcher for the TowerCraft Minecraft server</summary>
+  <developer id="com.towercraft">
+    <name>TowerCraft Launcher Contributors</name>
+  </developer>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+  <description>
+    <p>TowerCraft Launcher is a single-purpose Minecraft launcher dedicated to the TowerCraft server,
+    forked from Prism Launcher.</p>
+    <p>Features:</p>
+    <ul>
+      <li>Automatic download of Minecraft, Fabric and Java</li>
+      <li>One-click play, no instance management required</li>
+      <li>Server status, player count and news</li>
+      <li>Automatic updates for the launcher and the mod files</li>
+    </ul>
+  </description>
+  <releases>
+    <release version="@Launcher_VERSION_NAME@" date="@Launcher_BUILD_TIMESTAMP@"></release>
+  </releases>
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-fantasy">moderate</content_attribute>
+    <content_attribute id="social-chat">intense</content_attribute>
+  </content_rating>
+  <launchable type="desktop-id">@Launcher_AppID@.desktop</launchable>
+</component>

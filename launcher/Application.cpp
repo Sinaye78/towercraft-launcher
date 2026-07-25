@@ -57,15 +57,11 @@
 #include "ui/instanceview/AccessibleInstanceView.h"
 
 #include "ui/pages/BasePageProvider.h"
-#include "ui/pages/global/APIPage.h"
 #include "ui/pages/global/AccountListPage.h"
 #include "ui/pages/global/AppearancePage.h"
-#include "ui/pages/global/ExternalToolsPage.h"
 #include "ui/pages/global/JavaPage.h"
-#include "ui/pages/global/LanguagePage.h"
 #include "ui/pages/global/LauncherPage.h"
 #include "ui/pages/global/MinecraftPage.h"
-#include "ui/pages/global/ProxyPage.h"
 
 #include "ui/setupwizard/AutoJavaWizardPage.h"
 #include "ui/setupwizard/JavaWizardPage.h"
@@ -879,39 +875,16 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // Custom Microsoft Authentication Client ID
         m_settings->registerSetting("MSAClientIDOverride", "");
 
-        // Custom Flame API Key
-        {
-            m_settings->registerSetting("CFKeyOverride", "");
-            m_settings->registerSetting("FlameKeyOverride", "");
-
-            QString flameKey = m_settings->get("CFKeyOverride").toString();
-
-            if (!flameKey.isEmpty())
-                m_settings->set("FlameKeyOverride", flameKey);
-            m_settings->reset("CFKeyOverride");
-        }
-        m_settings->registerSetting("FallbackMRBlockedMods", true);
-        m_settings->registerSetting("ModrinthToken", "");
         m_settings->registerSetting("UserAgentOverride", "");
-
-        // FTBApp instances
-        m_settings->registerSetting("FTBAppInstancesPath", "");
-
-        // Custom Technic Client ID
-        m_settings->registerSetting("TechnicClientID", "");
 
         // Init page provider
         {
             m_globalSettingsProvider = std::make_unique<GenericPageProvider>(tr("Settings"));
             m_globalSettingsProvider->addPage<LauncherPage>();
-            m_globalSettingsProvider->addPage<LanguagePage>();
             m_globalSettingsProvider->addPage<AppearancePage>();
             m_globalSettingsProvider->addPage<MinecraftPage>();
             m_globalSettingsProvider->addPage<JavaPage>();
             m_globalSettingsProvider->addPage<AccountListPage>();
-            m_globalSettingsProvider->addPage<APIPage>();
-            m_globalSettingsProvider->addPage<ExternalToolsPage>();
-            m_globalSettingsProvider->addPage<ProxyPage>();
         }
 
         PixmapCache::setInstance(new PixmapCache(this));
@@ -998,13 +971,6 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_metacache->addBase("libraries", QDir("libraries").absolutePath());
         m_metacache->addBase("fmllibs", QDir("mods/minecraftforge/libs").absolutePath());
         m_metacache->addBase("general", QDir("cache").absolutePath());
-        m_metacache->addBase("ATLauncherPacks", QDir("cache/ATLauncherPacks").absolutePath());
-        m_metacache->addBase("FTBPacks", QDir("cache/FTBPacks").absolutePath());
-        m_metacache->addBase("TechnicPacks", QDir("cache/TechnicPacks").absolutePath());
-        m_metacache->addBase("FlamePacks", QDir("cache/FlamePacks").absolutePath());
-        m_metacache->addBase("FlameMods", QDir("cache/FlameMods").absolutePath());
-        m_metacache->addBase("ModrinthPacks", QDir("cache/ModrinthPacks").absolutePath());
-        m_metacache->addBase("ModrinthModpacks", QDir("cache/ModrinthModpacks").absolutePath());
         m_metacache->addBase("translations", QDir("translations").absolutePath());
         m_metacache->addBase("meta", QDir("meta").absolutePath());
         m_metacache->addBase("java", QDir("cache/java").absolutePath());
@@ -1574,6 +1540,16 @@ bool Application::kill(BaseInstance* instance)
     return true;
 }
 
+LaunchController* Application::launchController(BaseInstance* instance) const
+{
+    QMutexLocker locker(&m_instanceExtrasMutex);
+    auto it = m_instanceExtras.find(instance->id());
+    if (it == m_instanceExtras.end()) {
+        return nullptr;
+    }
+    return it->second.controller.get();
+}
+
 void Application::closeCurrentWindow()
 {
     if (focusWindow())
@@ -1830,8 +1806,6 @@ void Application::updateCapabilities()
     m_capabilities = None;
     if (!getMSAClientID().isEmpty())
         m_capabilities |= SupportsMSA;
-    if (!getFlameAPIKey().isEmpty())
-        m_capabilities |= SupportsFlame;
 
 #ifdef Q_OS_LINUX
     if (gamemode_query_status() >= 0)
@@ -1876,25 +1850,6 @@ QString Application::getMSAClientID()
     }
 
     return BuildConfig.MSA_CLIENT_ID;
-}
-
-QString Application::getFlameAPIKey()
-{
-    QString keyOverride = m_settings->get("FlameKeyOverride").toString();
-    if (!keyOverride.isEmpty()) {
-        return keyOverride;
-    }
-
-    return BuildConfig.FLAME_API_KEY;
-}
-
-QString Application::getModrinthAPIToken()
-{
-    QString tokenOverride = m_settings->get("ModrinthToken").toString();
-    if (!tokenOverride.isEmpty())
-        return tokenOverride;
-
-    return QString();
 }
 
 QString Application::getUserAgent()

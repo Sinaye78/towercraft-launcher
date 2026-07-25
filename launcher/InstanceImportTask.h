@@ -53,9 +53,6 @@ class InstanceImportTask : public InstanceTask {
 
    private:
     void processMultiMC();
-    void processTechnic();
-    void processFlame();
-    void processModrinth();
 
    private slots:
     void processZipPack();
@@ -68,9 +65,6 @@ class InstanceImportTask : public InstanceTask {
     enum class ModpackType {
         Unknown,
         MultiMC,
-        Technic,
-        Flame,
-        Modrinth,
     } m_modpackType = ModpackType::Unknown;
 
     // Extra info we might need, that's available before, but can't be derived from

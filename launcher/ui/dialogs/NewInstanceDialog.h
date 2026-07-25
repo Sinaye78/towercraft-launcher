@@ -47,7 +47,6 @@ class NewInstanceDialog;
 class PageContainer;
 class QDialogButtonBox;
 class ImportPage;
-class FlamePage;
 
 class NewInstanceDialog : public QDialog, public BasePageProvider {
     Q_OBJECT
@@ -98,8 +97,6 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
     QString importIconName;
 
     QString importVersion;
-
-    QString m_searchTerm;
 
     void importIconNow();
 };

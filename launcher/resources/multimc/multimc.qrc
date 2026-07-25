@@ -9,15 +9,8 @@
         <!-- launcher settings page -->
         <file>scalable/launcher.svg</file>
 
-        <!-- technic logo icon -->
-        <file>scalable/technic.svg</file>
-
-        <!-- ATLauncher logo icon (and related bits) -->
-        <file>scalable/atlauncher.svg</file>
-        <file>scalable/atlauncher-placeholder.png</file>
-
-        <!-- Modrinth logo icon -->
-        <file>scalable/instances/modrinth.svg</file>
+        <!-- TowerCraft dashboard background - placeholder art, pending real branding -->
+        <file>scalable/towercraft_dashboard_bg.png</file>
 
         <!-- A proxy icon. Our own. SSSsss -->
         <file>scalable/proxy.svg</file>
@@ -233,8 +226,6 @@
         <file>scalable/instances/chicken.svg</file>
         <file>scalable/instances/creeper.svg</file>
         <file>scalable/instances/enderpearl.svg</file>
-        <file>scalable/instances/ftb_logo.svg</file>
-        <file>scalable/instances/flame.svg</file>
         <file>scalable/instances/gear.svg</file>
         <file>scalable/instances/herobrine.svg</file>
         <file>scalable/instances/magitech.svg</file>
@@ -266,14 +257,6 @@
 
         <file>32x32/instances/enderpearl_legacy.png</file>
         <file>128x128/instances/enderpearl_legacy.png</file>
-
-        <file>32x32/instances/ftb_glow.png</file>
-        <file>128x128/instances/ftb_glow.png</file>
-
-        <file>32x32/instances/ftb_logo_legacy.png</file>
-        <file>128x128/instances/ftb_logo_legacy.png</file>
-
-        <file>128x128/instances/flame_legacy.png</file>
 
         <file>32x32/instances/gear_legacy.png</file>
         <file>128x128/instances/gear_legacy.png</file>

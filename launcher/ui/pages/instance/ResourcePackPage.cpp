@@ -39,36 +39,17 @@
 
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/ProgressDialog.h"
-#include "ui/dialogs/ResourceDownloadDialog.h"
-#include "ui/dialogs/ResourceUpdateDialog.h"
 
 ResourcePackPage::ResourcePackPage(MinecraftInstance* instance, ResourcePackFolderModel* model, QWidget* parent)
     : ExternalResourcesPage(instance, model, parent), m_model(model)
 {
-    ui->actionDownloadItem->setText(tr("Download Packs"));
-    ui->actionDownloadItem->setToolTip(tr("Download resource packs from online mod platforms"));
-    ui->actionDownloadItem->setEnabled(true);
-    ui->actionsToolbar->insertActionBefore(ui->actionAddItem, ui->actionDownloadItem);
+    ui->actionDownloadItem->setVisible(false);
+    ui->actionUpdateItem->setVisible(false);
+    ui->actionChangeVersion->setVisible(false);
 
-    connect(ui->actionDownloadItem, &QAction::triggered, this, &ResourcePackPage::downloadResourcePacks);
-
-    ui->actionUpdateItem->setToolTip(tr("Try to check or update all selected resource packs (all resource packs if none are selected)"));
-    connect(ui->actionUpdateItem, &QAction::triggered, this, &ResourcePackPage::updateResourcePacks);
-    ui->actionsToolbar->insertActionBefore(ui->actionAddItem, ui->actionUpdateItem);
-
-    auto* updateMenu = new QMenu(this);
-
-    auto* update = updateMenu->addAction(ui->actionUpdateItem->text());
-    connect(update, &QAction::triggered, this, &ResourcePackPage::updateResourcePacks);
-
-    updateMenu->addAction(ui->actionResetItemMetadata);
+    ui->actionResetItemMetadata->setToolTip(tr("Reset locally stored metadata for the selected resource packs."));
     connect(ui->actionResetItemMetadata, &QAction::triggered, this, &ResourcePackPage::deleteResourcePackMetadata);
-
-    ui->actionUpdateItem->setMenu(updateMenu);
-
-    ui->actionChangeVersion->setToolTip(tr("Change a mod's version."));
-    connect(ui->actionChangeVersion, &QAction::triggered, this, &ResourcePackPage::changeResourcePackVersion);
-    ui->actionsToolbar->insertActionAfter(ui->actionUpdateItem, ui->actionChangeVersion);
+    ui->actionsToolbar->insertActionBefore(ui->actionAddItem, ui->actionResetItemMetadata);
 }
 
 void ResourcePackPage::updateFrame(const QModelIndex& current, [[maybe_unused]] const QModelIndex& previous)
@@ -77,140 +58,6 @@ void ResourcePackPage::updateFrame(const QModelIndex& current, [[maybe_unused]] 
     int row = sourceCurrent.row();
     auto& rp = m_model->at(row);
     ui->frame->updateWithResourcePack(rp);
-}
-
-void ResourcePackPage::downloadResourcePacks()
-{
-    if (m_instance->typeName() != "Minecraft") {
-        return;  // this is a null instance or a legacy instance
-    }
-
-    m_downloadDialog = new ResourceDownload::ResourcePackDownloadDialog(this, m_model, m_instance);
-    connect(this, &QObject::destroyed, m_downloadDialog, &QDialog::close);
-    connect(m_downloadDialog, &QDialog::finished, this, &ResourcePackPage::downloadDialogFinished);
-
-    m_downloadDialog->open();
-}
-
-void ResourcePackPage::downloadDialogFinished(int result)
-{
-    if (result != 0) {
-        auto* tasks = new ConcurrentTask("Download Resource Pack", APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
-        connect(tasks, &Task::failed, [this, tasks](const QString& reason) {
-            CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show();
-            tasks->deleteLater();
-        });
-        connect(tasks, &Task::aborted, [this, tasks]() {
-            CustomMessageBox::selectable(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information)->show();
-            tasks->deleteLater();
-        });
-        connect(tasks, &Task::succeeded, [this, tasks]() {
-            QStringList warnings = tasks->warnings();
-            if (warnings.count()) {
-                CustomMessageBox::selectable(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning)->show();
-            }
-
-            tasks->deleteLater();
-        });
-
-        if (m_downloadDialog) {
-            for (auto& task : m_downloadDialog->getTasks()) {
-                tasks->addTask(task);
-            }
-        } else {
-            qWarning() << "ResourceDownloadDialog vanished before we could collect tasks!";
-        }
-
-        ProgressDialog loadDialog(this);
-        loadDialog.setSkipButton(true, tr("Abort"));
-        loadDialog.execWithTask(tasks);
-
-        m_model->update();
-    }
-    if (m_downloadDialog) {
-        m_downloadDialog->deleteLater();
-    }
-}
-
-void ResourcePackPage::updateResourcePacks()
-{
-    if (m_instance->typeName() != "Minecraft") {
-        return;  // this is a null instance or a legacy instance
-    }
-
-    if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
-        QMessageBox::critical(this, tr("Error"), tr("Resource pack updates are unavailable when metadata is disabled!"));
-        return;
-    }
-    if (m_instance != nullptr && m_instance->isRunning()) {
-        auto response = CustomMessageBox::selectable(
-                            this, tr("Confirm Update"),
-                            tr("Updating resource packs while the game is running may cause pack duplication and game crashes.\n"
-                               "The old files may not be deleted as they are in use.\n"
-                               "Are you sure you want to do this?"),
-                            QMessageBox::Warning, QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-                            ->exec();
-
-        if (response != QMessageBox::Yes) {
-            return;
-        }
-    }
-    auto selection = m_filterModel->mapSelectionToSource(ui->treeView->selectionModel()->selection()).indexes();
-
-    auto modsList = m_model->selectedResources(selection);
-    bool useAll = modsList.empty();
-    if (useAll) {
-        modsList = m_model->allResources();
-    }
-
-    ResourceUpdateDialog updateDialog(this, m_instance, m_model, modsList, false);
-    updateDialog.checkCandidates();
-
-    if (updateDialog.aborted()) {
-        CustomMessageBox::selectable(this, tr("Aborted"), tr("The resource pack updater was aborted!"), QMessageBox::Warning)->show();
-        return;
-    }
-    if (updateDialog.noUpdates()) {
-        QString message{ tr("'%1' is up-to-date! :)").arg(modsList.front()->name()) };
-        if (modsList.size() > 1) {
-            if (useAll) {
-                message = tr("All resource packs are up-to-date! :)");
-            } else {
-                message = tr("All selected resource packs are up-to-date! :)");
-            }
-        }
-        CustomMessageBox::selectable(this, tr("Update checker"), message)->exec();
-        return;
-    }
-
-    if (updateDialog.exec() != 0) {
-        auto* tasks = new ConcurrentTask("Download Resource Packs", APPLICATION->settings()->get("NumberOfConcurrentDownloads").toInt());
-        connect(tasks, &Task::failed, [this, tasks](const QString& reason) {
-            CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show();
-            tasks->deleteLater();
-        });
-        connect(tasks, &Task::aborted, [this, tasks]() {
-            CustomMessageBox::selectable(this, tr("Aborted"), tr("Download stopped by user."), QMessageBox::Information)->show();
-            tasks->deleteLater();
-        });
-        connect(tasks, &Task::succeeded, [this, tasks]() {
-            QStringList warnings = tasks->warnings();
-            if (warnings.count()) {
-                CustomMessageBox::selectable(this, tr("Warnings"), warnings.join('\n'), QMessageBox::Warning)->show();
-            }
-            tasks->deleteLater();
-        });
-
-        for (const auto& task : updateDialog.getTasks()) {
-            tasks->addTask(task);
-        }
-
-        ProgressDialog loadDialog(this);
-        loadDialog.setSkipButton(true, tr("Abort"));
-        loadDialog.execWithTask(tasks);
-
-        m_model->update();
-    }
 }
 
 void ResourcePackPage::deleteResourcePackMetadata()
@@ -234,35 +81,4 @@ void ResourcePackPage::deleteResourcePackMetadata()
     }
 
     m_model->deleteMetadata(selection);
-}
-
-void ResourcePackPage::changeResourcePackVersion()
-{
-    if (m_instance->typeName() != "Minecraft") {
-        return;  // this is a null instance or a legacy instance
-    }
-
-    if (APPLICATION->settings()->get("ModMetadataDisabled").toBool()) {
-        QMessageBox::critical(this, tr("Error"), tr("Resource pack updates are unavailable when metadata is disabled!"));
-        return;
-    }
-
-    const QModelIndexList rows = ui->treeView->selectionModel()->selectedRows();
-
-    if (rows.count() != 1) {
-        return;
-    }
-
-    Resource& resource = m_model->at(m_filterModel->mapToSource(rows[0]).row());
-
-    if (resource.metadata() == nullptr) {
-        return;
-    }
-
-    m_downloadDialog = new ResourceDownload::ResourcePackDownloadDialog(this, m_model, m_instance, true);
-    connect(this, &QObject::destroyed, m_downloadDialog, &QDialog::close);
-    connect(m_downloadDialog, &QDialog::finished, this, &ResourcePackPage::downloadDialogFinished);
-
-    m_downloadDialog->setResourceMetadata(resource.metadata());
-    m_downloadDialog->open();
 }

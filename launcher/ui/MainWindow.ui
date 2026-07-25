@@ -118,10 +118,7 @@
    <addaction name="actionKillInstance"/>
    <addaction name="separator"/>
    <addaction name="actionEditInstance"/>
-   <addaction name="actionChangeInstGroup"/>
    <addaction name="actionViewSelectedInstFolder"/>
-   <addaction name="actionExportInstance"/>
-   <addaction name="actionCopyInstance"/>
    <addaction name="actionDeleteInstance"/>
    <addaction name="actionCreateInstanceShortcut"/>
   </widget>
@@ -147,10 +144,7 @@
     <addaction name="actionKillInstance"/>
     <addaction name="separator"/>
     <addaction name="actionEditInstance"/>
-    <addaction name="actionChangeInstGroup"/>
     <addaction name="actionViewSelectedInstFolder"/>
-    <addaction name="actionExportInstance"/>
-    <addaction name="actionCopyInstance"/>
     <addaction name="actionDeleteInstance"/>
     <addaction name="actionCreateInstanceShortcut"/>
     <addaction name="separator"/>
@@ -374,20 +368,6 @@
     <string>Rename the selected instance.</string>
    </property>
   </action>
-  <action name="actionChangeInstGroup">
-   <property name="icon">
-    <iconset theme="tag"/>
-   </property>
-   <property name="text">
-    <string>&amp;Change Group...</string>
-   </property>
-   <property name="toolTip">
-    <string>Change the selected instance's group.</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+G</string>
-   </property>
-  </action>
   <action name="actionChangeInstIcon">
    <property name="text">
     <string>Change Icon</string>
@@ -433,55 +413,6 @@
    </property>
    <property name="autoRepeat">
     <bool>false</bool>
-   </property>
-  </action>
-  <action name="actionCopyInstance">
-   <property name="icon">
-    <iconset theme="copy"/>
-   </property>
-   <property name="text">
-    <string>Cop&amp;y...</string>
-   </property>
-   <property name="toolTip">
-    <string>Copy the selected instance.</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+D</string>
-   </property>
-  </action>
-  <action name="actionExportInstance">
-   <property name="icon">
-    <iconset theme="export"/>
-   </property>
-   <property name="text">
-    <string>E&amp;xport...</string>
-   </property>
-   <property name="toolTip">
-    <string>Export the selected instance to supported formats.</string>
-   </property>
-  </action>
-  <action name="actionExportInstanceZip">
-   <property name="icon">
-    <iconset theme="launcher"/>
-   </property>
-   <property name="text">
-    <string>Prism Launcher (zip)</string>
-   </property>
-  </action>
-  <action name="actionExportInstanceMrPack">
-   <property name="icon">
-    <iconset theme="modrinth"/>
-   </property>
-   <property name="text">
-    <string>Modrinth (mrpack)</string>
-   </property>
-  </action>
-  <action name="actionExportInstanceFlamePack">
-   <property name="icon">
-    <iconset theme="flame"/>
-   </property>
-   <property name="text">
-    <string>CurseForge (zip)</string>
    </property>
   </action>
   <action name="actionCreateInstanceShortcut">

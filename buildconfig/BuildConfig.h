@@ -154,14 +154,24 @@ class Config {
     QString MSA_CLIENT_ID;
 
     /**
-     * Client API key for CurseForge
-     */
-    QString FLAME_API_KEY;
-
-    /**
      * Metadata repository URL prefix
      */
     QString META_URL;
+
+    /**
+     * URL to the manifest.json (name/size/sha256/url per file) that drives TowerCraft's mod-file
+     * sync. Blank until a real repo exists (see DECISIONS.md) - the sync task no-ops cleanly when
+     * empty rather than failing.
+     */
+    QString TOWERCRAFT_MANIFEST_URL;
+
+    /**
+     * Exact Minecraft version and Fabric Loader version the single TowerCraft instance is
+     * auto-provisioned with. Pinned exactly (not "recommended") to match what the TowerCraft mod
+     * jar actually requires - see the mod project's fabric.mod.json/gradle.properties.
+     */
+    QString TOWERCRAFT_MINECRAFT_VERSION;
+    QString TOWERCRAFT_FABRIC_LOADER_VERSION;
 
     QString GLFW_LIBRARY_NAME;
     QString OPENAL_LIBRARY_NAME;
@@ -177,27 +187,6 @@ class Config {
     QString IMGUR_BASE_URL = "https://api.imgur.com/3/";
     QString LEGACY_FMLLIBS_BASE_URL;
     QString TRANSLATION_FILES_URL;
-
-    QString FTB_API_BASE_URL = "https://api.feed-the-beast.com/v1/modpacks/public";
-
-    QString LEGACY_FTB_CDN_BASE_URL = "https://dist.creeper.host/FTB2/";
-
-    QString ATL_DOWNLOAD_SERVER_URL = "https://download.nodecdn.net/containers/atl/";
-    QString ATL_API_BASE_URL = "https://api.atlauncher.com/v1/";
-
-    QString TECHNIC_API_BASE_URL = "https://api.technicpack.net/";
-    /**
-     * The build that is reported to the Technic API.
-     */
-    QString TECHNIC_API_BUILD = "multimc";
-
-    QString MODRINTH_STAGING_URL = "https://staging-api.modrinth.com/v2";
-    QString MODRINTH_PROD_URL = "https://api.modrinth.com/v2";
-    QStringList MODRINTH_MRPACK_HOSTS{ "cdn.modrinth.com", "github.com", "raw.githubusercontent.com", "gitlab.com" };
-    QString MODRINTH_DOWNLOAD_HOST = "cdn.modrinth.com";
-
-    QString FLAME_BASE_URL = "https://api.curseforge.com/v1";
-    QString FLAME_DOWNLOAD_HOST = "edge.forgecdn.net";
 
     QString versionString() const;
     /**

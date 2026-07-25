@@ -58,6 +58,7 @@ class QLabel;
 class MinecraftLauncher;
 class BaseProfilerFactory;
 class InstanceView;
+class TowerCraftDashboardWidget;
 class KonamiCode;
 class InstanceTask;
 class LabeledToolButton;
@@ -101,10 +102,6 @@ class MainWindow : public QMainWindow {
     void on_actionMATRIX_triggered();
 
     void on_actionDISCORD_triggered();
-
-    void on_actionCopyInstance_triggered();
-
-    void on_actionChangeInstGroup_triggered();
 
     void on_actionChangeInstIcon_triggered();
 
@@ -154,14 +151,7 @@ class MainWindow : public QMainWindow {
 
     void on_actionDeleteInstance_triggered();
 
-    void deleteGroup(QString group);
-    void renameGroup(QString group);
     void undoTrashInstance();
-
-    inline void on_actionExportInstance_triggered() { on_actionExportInstanceZip_triggered(); }
-    void on_actionExportInstanceZip_triggered();
-    void on_actionExportInstanceMrPack_triggered();
-    void on_actionExportInstanceFlamePack_triggered();
 
     void on_actionRenameInstance_triggered();
 
@@ -237,6 +227,7 @@ class MainWindow : public QMainWindow {
     // these are managed by Qt's memory management model!
     InstanceView* view = nullptr;
     InstanceProxyModel* proxymodel = nullptr;
+    TowerCraftDashboardWidget* m_dashboard = nullptr;
     QToolButton* newsLabel = nullptr;
     QLabel* m_statusLeft = nullptr;
     QLabel* m_statusCenter = nullptr;

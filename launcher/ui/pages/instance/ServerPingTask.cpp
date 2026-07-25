@@ -16,6 +16,40 @@ unsigned getOnlinePlayers(QJsonObject data)
     }
 }
 
+int getMaxPlayers(QJsonObject data)
+{
+    try {
+        return Json::requireInteger(Json::requireObject(data, "players"), "max");
+    } catch (Exception& e) {
+        qWarning() << "server ping failed to parse max players" << e.what();
+        return -1;
+    }
+}
+
+QString getVersionName(QJsonObject data)
+{
+    try {
+        return Json::requireString(Json::requireObject(data, "version"), "name");
+    } catch (Exception& e) {
+        qWarning() << "server ping failed to parse version" << e.what();
+        return {};
+    }
+}
+
+// The status document's "description" (MOTD) is either a plain string or a chat-component object
+// with a "text" field, depending on server implementation - handle both rather than assuming one.
+QString getMotd(QJsonObject data)
+{
+    auto value = data.value("description");
+    if (value.isString()) {
+        return value.toString();
+    }
+    if (value.isObject()) {
+        return value.toObject().value("text").toString();
+    }
+    return {};
+}
+
 void ServerPingTask::executeTask()
 {
     qDebug() << "Querying status of" << QString("%1:%2").arg(m_domain).arg(m_port);
@@ -30,7 +64,10 @@ void ServerPingTask::executeTask()
 
         connect(client, &McClient::succeeded, this, [this](QJsonObject data) {
             m_outputOnlinePlayers = getOnlinePlayers(data);
-            qDebug() << "Online players:" << m_outputOnlinePlayers;
+            m_outputMaxPlayers = getMaxPlayers(data);
+            m_outputVersionName = getVersionName(data);
+            m_outputMotd = getMotd(data);
+            qDebug() << "Online players:" << m_outputOnlinePlayers << "/" << m_outputMaxPlayers << "version:" << m_outputVersionName;
             emitSucceeded();
         });
         connect(client, &McClient::failed, this, [this](QString error) { emitFailed(error); });

@@ -5,7 +5,6 @@
 #include <QFutureWatcher>
 #include <QString>
 
-#include "modplatform/ModIndex.h"
 #include "tasks/Task.h"
 
 namespace Hashing {
@@ -45,7 +44,6 @@ class Hasher : public Task {
     QFutureWatcher<QString> m_watcher;
 };
 
-Hasher::Ptr createHasher(QString file_path, ModPlatform::ResourceProvider provider);
 Hasher::Ptr createHasher(QString file_path, QString type);
 
 }  // namespace Hashing

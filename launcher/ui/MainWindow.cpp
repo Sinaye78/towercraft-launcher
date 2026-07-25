@@ -95,11 +95,8 @@
 #include "ui/GuiUtil.h"
 #include "ui/ViewLogWindow.h"
 #include "ui/dialogs/AboutDialog.h"
-#include "ui/dialogs/CopyInstanceDialog.h"
 #include "ui/dialogs/CreateShortcutDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
-#include "ui/dialogs/ExportInstanceDialog.h"
-#include "ui/dialogs/ExportPackDialog.h"
 #include "ui/dialogs/IconPickerDialog.h"
 #include "ui/dialogs/ImportResourceDialog.h"
 #include "ui/dialogs/NewInstanceDialog.h"
@@ -108,6 +105,7 @@
 #include "ui/dialogs/skins/SkinManageDialog.h"
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
+#include "ui/TowerCraftDashboardWidget.h"
 #include "ui/instanceview/InstanceView.h"
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
@@ -123,12 +121,9 @@
 #include "minecraft/mod/tasks/LocalResourceParse.h"
 
 #include "modplatform/ModIndex.h"
-#include "modplatform/flame/FlameAPI.h"
-#include "modplatform/flame/FlameModIndex.h"
 
 #include "KonamiCode.h"
 
-#include "InstanceCopyTask.h"
 #include "InstanceDirUpdate.h"
 
 #include "Json.h"
@@ -206,12 +201,6 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
         auto accountMenuButton = dynamic_cast<QToolButton*>(ui->mainToolBar->widgetForAction(ui->actionAccountsButton));
         accountMenuButton->setPopupMode(QToolButton::InstantPopup);
-
-        auto exportInstanceMenu = new QMenu(this);
-        exportInstanceMenu->addAction(ui->actionExportInstanceZip);
-        exportInstanceMenu->addAction(ui->actionExportInstanceMrPack);
-        exportInstanceMenu->addAction(ui->actionExportInstanceFlamePack);
-        ui->actionExportInstance->setMenu(exportInstanceMenu);
     }
 
     // hide, disable and show stuff
@@ -333,6 +322,13 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
         ui->horizontalLayout->addWidget(view);
+        // The instance grid stays alive (selection/model/context-menu plumbing used throughout this
+        // file is still wired to it) but isn't shown: TowerCraft only ever manages one instance, so
+        // the visible home screen is the dashboard below instead of a grid to pick from.
+        view->setVisible(false);
+
+        m_dashboard = new TowerCraftDashboardWidget(ui->centralWidget);
+        ui->horizontalLayout->addWidget(m_dashboard);
     }
     // The cat background
     {
@@ -571,15 +567,6 @@ void MainWindow::showInstanceContextMenu(const QPoint& pos)
         actions.prepend(actionSep);
         actions.prepend(actionVoid);
         actions.append(actionCreateInstance);
-        if (!group.isNull()) {
-            QAction* actionDeleteGroup = new QAction(tr("&Delete group"), this);
-            connect(actionDeleteGroup, &QAction::triggered, this, [this, group] { deleteGroup(group); });
-            actions.append(actionDeleteGroup);
-
-            QAction* actionRenameGroup = new QAction(tr("&Rename group"), this);
-            connect(actionRenameGroup, &QAction::triggered, this, [this, group] { renameGroup(group); });
-            actions.append(actionRenameGroup);
-        }
     }
     QMenu myMenu;
     myMenu.addActions(actions);
@@ -879,23 +866,6 @@ void MainWindow::instanceFromInstanceTask(InstanceTask* rawTask)
     runModalTask(task.get());
 }
 
-void MainWindow::on_actionCopyInstance_triggered()
-{
-    if (!m_selectedInstance)
-        return;
-
-    CopyInstanceDialog copyInstDlg(m_selectedInstance, this);
-    if (!copyInstDlg.exec())
-        return;
-
-    auto copyTask = new InstanceCopyTask(m_selectedInstance, copyInstDlg.getChosenOptions());
-    copyTask->setName(copyInstDlg.instName());
-    copyTask->setGroup(copyInstDlg.instGroup());
-    copyTask->setIcon(copyInstDlg.iconKey());
-    unique_qobject_ptr<Task> task(APPLICATION->instances()->wrapInstanceTask(copyTask));
-    runModalTask(task.get());
-}
-
 void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& extra_info)
 {
     QString groupName;
@@ -946,7 +916,6 @@ void MainWindow::processURLs(QList<QUrl> urls)
         if (url.scheme().isEmpty())
             url.setScheme("file");
 
-        ModPlatform::IndexedVersion version;
         QMap<QString, QString> extra_info;
         QUrl local_url;
         if (!url.isLocalFile()) {  // download the remote resource and identify
@@ -954,67 +923,7 @@ void MainWindow::processURLs(QList<QUrl> urls)
             const bool isExternalURLImport = (url.host().toLower() == "import") || (url.path().startsWith("/import", Qt::CaseInsensitive));
 
             QUrl dl_url;
-            if (url.scheme() == "curseforge" || (url.scheme() == BuildConfig.LAUNCHER_APP_BINARY_NAME && url.host() == "install")) {
-                // need to find the download link for the modpack / resource
-                // format of url curseforge://install?addonId=IDHERE&fileId=IDHERE
-                // format of url binaryname://install?platform=curseforge&addonId=IDHERE&fileId=IDHERE
-                QUrlQuery query(url);
-
-                // check if this is a binaryname:// url
-                if (url.scheme() == BuildConfig.LAUNCHER_APP_BINARY_NAME) {
-                    // check this is an curseforge platform request
-                    if (query.queryItemValue("platform").toLower() != "curseforge") {
-                        qDebug() << "Invalid mod distribution platform:" << query.queryItemValue("platform");
-                        continue;
-                    }
-                }
-
-                if (query.allQueryItemValues("addonId").isEmpty() || query.allQueryItemValues("fileId").isEmpty()) {
-                    qDebug() << "Invalid curseforge link:" << url;
-                    continue;
-                }
-
-                auto addonId = query.allQueryItemValues("addonId")[0];
-                auto fileId = query.allQueryItemValues("fileId")[0];
-
-                extra_info.insert("pack_id", addonId);
-                extra_info.insert("pack_version_id", fileId);
-
-                auto api = FlameAPI();
-                auto [job, array] = api.getFile(addonId, fileId);
-
-                connect(job.get(), &Task::failed, this,
-                        [this](QString reason) { CustomMessageBox::selectable(this, tr("Error"), reason, QMessageBox::Critical)->show(); });
-                connect(job.get(), &Task::succeeded, this, [this, array, addonId, fileId, &dl_url, &version] {
-                    qDebug() << "Returned CFURL Json:\n" << array->toStdString().c_str();
-                    auto doc = Json::requireDocument(*array);
-                    auto data = doc.object()["data"].toObject();
-                    // No way to find out if it's a mod or a modpack before here
-                    // And also we need to check if it ends with .zip, instead of any better way
-                    version = FlameMod::loadIndexedPackVersion(data);
-                    auto fileName = version.fileName;
-
-                    // Have to use ensureString then use QUrl to get proper url encoding
-                    dl_url = QUrl(version.downloadUrl);
-                    if (!dl_url.isValid()) {
-                        CustomMessageBox::selectable(
-                            this, tr("Error"),
-                            tr("The modpack, mod, or resource %1 is blocked for third-parties! Please download it manually.").arg(fileName),
-                            QMessageBox::Critical)
-                            ->show();
-                        return;
-                    }
-
-                    QFileInfo dl_file(dl_url.fileName());
-                });
-
-                {  // drop stack
-                    ProgressDialog dlUrlDialod(this);
-                    dlUrlDialod.setSkipButton(true, tr("Abort"));
-                    dlUrlDialod.execWithTask(job.get());
-                }
-
-            } else if (url.scheme() == BuildConfig.LAUNCHER_APP_BINARY_NAME && !isExternalURLImport) {
+            if (url.scheme() == BuildConfig.LAUNCHER_APP_BINARY_NAME && !isExternalURLImport) {
                 QVariantMap receivedData;
                 const QUrlQuery query(url.query());
                 const auto items = query.queryItems();
@@ -1151,19 +1060,19 @@ void MainWindow::processURLs(QList<QUrl> urls)
 
         switch (type) {
             case ModPlatform::ResourceType::ResourcePack:
-                minecraftInst->resourcePackList()->installResourceWithFlameMetadata(localFileName, version);
+                minecraftInst->resourcePackList()->installResource(localFileName);
                 break;
             case ModPlatform::ResourceType::TexturePack:
-                minecraftInst->texturePackList()->installResourceWithFlameMetadata(localFileName, version);
+                minecraftInst->texturePackList()->installResource(localFileName);
                 break;
             case ModPlatform::ResourceType::DataPack:
                 qWarning() << "Importing of Data Packs not supported at this time. Ignoring" << localFileName;
                 break;
             case ModPlatform::ResourceType::Mod:
-                minecraftInst->loaderModList()->installResourceWithFlameMetadata(localFileName, version);
+                minecraftInst->loaderModList()->installResource(localFileName);
                 break;
             case ModPlatform::ResourceType::ShaderPack:
-                minecraftInst->shaderPackList()->installResourceWithFlameMetadata(localFileName, version);
+                minecraftInst->shaderPackList()->installResource(localFileName);
                 break;
             case ModPlatform::ResourceType::World:
                 minecraftInst->worldList()->installWorld(localFileInfo);
@@ -1233,56 +1142,6 @@ void MainWindow::setSelectedInstanceById(const QString& id)
         view->selectionModel()->setCurrentIndex(selectionIndex, QItemSelectionModel::ClearAndSelect);
         updateStatusCenter();
     }
-}
-
-void MainWindow::on_actionChangeInstGroup_triggered()
-{
-    if (!m_selectedInstance)
-        return;
-
-    InstanceId instId = m_selectedInstance->id();
-    QString src(APPLICATION->instances()->getInstanceGroup(instId));
-
-    QStringList groups = APPLICATION->instances()->getGroups();
-    groups.prepend("");
-    int index = groups.indexOf(src);
-    bool ok = false;
-    QString dst = QInputDialog::getItem(this, tr("Group name"), tr("Enter a new group name."), groups, index, true, &ok);
-    dst = dst.simplified();
-
-    if (ok) {
-        APPLICATION->instances()->setInstanceGroup(instId, dst);
-    }
-}
-
-void MainWindow::deleteGroup(QString group)
-{
-    Q_ASSERT(!group.isEmpty());
-
-    const int reply = QMessageBox::question(this, tr("Delete group"), tr("Are you sure you want to delete the group '%1'?").arg(group),
-                                            QMessageBox::Yes | QMessageBox::No);
-    if (reply == QMessageBox::Yes)
-        APPLICATION->instances()->deleteGroup(group);
-}
-
-void MainWindow::renameGroup(QString group)
-{
-    Q_ASSERT(!group.isEmpty());
-
-    QString name = QInputDialog::getText(this, tr("Rename group"), tr("Enter a new group name."), QLineEdit::Normal, group);
-    name = name.simplified();
-    if (name.isNull() || name == group)
-        return;
-
-    const bool empty = name.isEmpty();
-    const bool duplicate = APPLICATION->instances()->getGroups().contains(name, Qt::CaseInsensitive) && group.toLower() != name.toLower();
-
-    if (empty || duplicate) {
-        QMessageBox::warning(this, tr("Cannot rename group"), empty ? tr("Cannot set empty name.") : tr("Group already exists. :/"));
-        return;
-    }
-
-    APPLICATION->instances()->renameGroup(group, name);
 }
 
 void MainWindow::undoTrashInstance()
@@ -1526,43 +1385,6 @@ void MainWindow::on_actionDeleteInstance_triggered()
     selectionBad();
 }
 
-void MainWindow::on_actionExportInstanceZip_triggered()
-{
-    if (m_selectedInstance) {
-        ExportInstanceDialog dlg(m_selectedInstance, this);
-        dlg.exec();
-    }
-}
-
-void MainWindow::on_actionExportInstanceMrPack_triggered()
-{
-    if (m_selectedInstance) {
-        auto instance = dynamic_cast<MinecraftInstance*>(m_selectedInstance);
-        if (instance != nullptr) {
-            ExportPackDialog dlg(instance, this);
-            dlg.exec();
-        }
-    }
-}
-
-void MainWindow::on_actionExportInstanceFlamePack_triggered()
-{
-    if (m_selectedInstance) {
-        auto instance = dynamic_cast<MinecraftInstance*>(m_selectedInstance);
-        if (instance) {
-            if (auto cmp = instance->getPackProfile()->getComponent("net.minecraft");
-                cmp && cmp->getVersionFile() && cmp->getVersionFile()->type == "snapshot") {
-                QMessageBox msgBox(this);
-                msgBox.setText("Snapshots are currently not supported by CurseForge modpacks.");
-                msgBox.exec();
-                return;
-            }
-            ExportPackDialog dlg(instance, this, ModPlatform::ResourceProvider::FLAME);
-            dlg.exec();
-        }
-    }
-}
-
 void MainWindow::on_actionRenameInstance_triggered()
 {
     if (m_selectedInstance) {
@@ -1673,7 +1495,6 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
         ui->actionLaunchInstance->setEnabled(m_selectedInstance->canLaunch());
 
         ui->actionKillInstance->setEnabled(m_selectedInstance->isRunning());
-        ui->actionExportInstance->setEnabled(m_selectedInstance->canExport());
         renameButton->setText(m_selectedInstance->name());
         m_statusLeft->setText(m_selectedInstance->getStatusbarDescription());
         updateStatusCenter();
@@ -1772,11 +1593,8 @@ void MainWindow::updateStatusCenter()
 void MainWindow::setInstanceActionsEnabled(bool enabled)
 {
     ui->actionEditInstance->setEnabled(enabled);
-    ui->actionChangeInstGroup->setEnabled(enabled);
     ui->actionViewSelectedInstFolder->setEnabled(enabled);
-    ui->actionExportInstance->setEnabled(enabled);
     ui->actionDeleteInstance->setEnabled(enabled);
-    ui->actionCopyInstance->setEnabled(enabled);
     ui->actionCreateInstanceShortcut->setEnabled(enabled);
 }
 

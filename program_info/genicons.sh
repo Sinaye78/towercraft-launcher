@@ -1,6 +1,9 @@
 #!/bin/bash
+# NOTE: this script's macOS/.bigsur.svg icon source was removed along with Prism's own brand assets
+# during the TowerCraft rebrand; only the Windows/.ico + in-app launcher.svg pipeline still applies
+# until real TowerCraft branding assets replace the current placeholder.
 
-LAUNCHER_APPID="org.prismlauncher.PrismLauncher"
+LAUNCHER_APPID="com.towercraft.TowerCraftLauncher"
 
 svg2png() {
     input_file="$1"

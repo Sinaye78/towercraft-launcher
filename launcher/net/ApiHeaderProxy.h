@@ -23,64 +23,22 @@
 #include "BuildConfig.h"
 #include "net/HeaderProxy.h"
 
-#include <QJsonDocument>
-#include <QJsonObject>
-
 namespace Net {
 
-struct ModrinthDownloadMeta {
-    QString reason;
-    QString gameVersion;
-    QString loader;
-
-    bool isEmpty() const { return reason.isEmpty(); }
-
-    QByteArray toJson() const
-    {
-        QJsonObject obj;
-        if (!reason.isEmpty()) {
-            obj["reason"] = reason;
-        }
-        if (!gameVersion.isEmpty()) {
-            obj["game_version"] = gameVersion;
-        }
-        if (!loader.isEmpty()) {
-            obj["loader"] = loader;
-        }
-        return QJsonDocument(obj).toJson(QJsonDocument::Compact);
-    }
-};
-
+/** No mod-platform API needs bespoke headers anymore (TowerCraft only talks to Mojang/Fabric meta
+ * servers, GitHub, and its own manifest host) - kept as an attachable no-op so ApiDownload/ApiUpload
+ * don't need to special-case "no header proxy". */
 class ApiHeaderProxy : public HeaderProxy {
    public:
     ApiHeaderProxy() = default;
-    explicit ApiHeaderProxy(ModrinthDownloadMeta meta) : m_meta(std::move(meta)) {}
     ~ApiHeaderProxy() override = default;
 
    public:
     QList<HeaderPair> headers(const QNetworkRequest& request) const override
     {
-        QList<HeaderPair> hdrs;
-        const auto host = request.url().host();
-
-        if (APPLICATION->capabilities() & Application::SupportsFlame &&
-            (host == QUrl(BuildConfig.FLAME_BASE_URL).host() || host == BuildConfig.FLAME_DOWNLOAD_HOST)) {
-            hdrs.append({ .headerName = "x-api-key", .headerValue = APPLICATION->getFlameAPIKey().toUtf8() });
-        } else if (host == QUrl(BuildConfig.MODRINTH_PROD_URL).host() || host == QUrl(BuildConfig.MODRINTH_STAGING_URL).host()) {
-            QString token = APPLICATION->getModrinthAPIToken();
-            if (!token.isNull()) {
-                hdrs.append({ .headerName = "Authorization", .headerValue = token.toUtf8() });
-            }
-        }
-
-        if (host == BuildConfig.MODRINTH_DOWNLOAD_HOST && !m_meta.isEmpty()) {
-            hdrs.append({ .headerName = "modrinth-download-meta", .headerValue = m_meta.toJson() });
-        }
-        return hdrs;
+        Q_UNUSED(request);
+        return {};
     };
-
-   private:
-    ModrinthDownloadMeta m_meta;
 };
 
 }  // namespace Net
