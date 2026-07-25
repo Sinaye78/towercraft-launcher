@@ -125,8 +125,8 @@ void TowerCraftDashboardWidget::refreshInstanceState()
 {
     auto* instance = currentInstance();
     if (!instance) {
-        m_versionLabel->setText(tr("TowerCraft - aucune instance configuree"));
-        m_playButton->setEnabled(false);
+        m_versionLabel->setText(tr("TowerCraft - premier lancement (les fichiers seront telecharges)"));
+        setPlayingState(false);
         return;
     }
 
@@ -148,7 +148,7 @@ void TowerCraftDashboardWidget::refreshInstanceState()
 void TowerCraftDashboardWidget::setPlayingState(bool running)
 {
     m_playButton->setText(running ? tr("EN JEU...") : tr("JOUER"));
-    m_playButton->setEnabled(!running && currentInstance() != nullptr);
+    m_playButton->setEnabled(!running && !m_preparingLaunch);
     m_progressBar->setVisible(running);
     // The log stays visible once shown (even after this drops back to "not running" on failure or
     // exit) so the player can still read what happened - only appendLog() reveals it in the first
