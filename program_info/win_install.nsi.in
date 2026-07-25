@@ -36,73 +36,8 @@ OutFile "../@Launcher_CommonName@-Setup.exe"
 
 ; Languages
 
-!insertmacro MUI_LANGUAGE "English"
 !insertmacro MUI_LANGUAGE "French"
-!insertmacro MUI_LANGUAGE "German"
-!insertmacro MUI_LANGUAGE "Spanish"
-!insertmacro MUI_LANGUAGE "SpanishInternational"
-!insertmacro MUI_LANGUAGE "SimpChinese"
-!insertmacro MUI_LANGUAGE "TradChinese"
-!insertmacro MUI_LANGUAGE "Japanese"
-!insertmacro MUI_LANGUAGE "Korean"
-!insertmacro MUI_LANGUAGE "Italian"
-!insertmacro MUI_LANGUAGE "Dutch"
-!insertmacro MUI_LANGUAGE "Danish"
-!insertmacro MUI_LANGUAGE "Swedish"
-!insertmacro MUI_LANGUAGE "Norwegian"
-!insertmacro MUI_LANGUAGE "NorwegianNynorsk"
-!insertmacro MUI_LANGUAGE "Finnish"
-!insertmacro MUI_LANGUAGE "Greek"
-!insertmacro MUI_LANGUAGE "Russian"
-!insertmacro MUI_LANGUAGE "Portuguese"
-!insertmacro MUI_LANGUAGE "PortugueseBR"
-!insertmacro MUI_LANGUAGE "Polish"
-!insertmacro MUI_LANGUAGE "Ukrainian"
-!insertmacro MUI_LANGUAGE "Czech"
-!insertmacro MUI_LANGUAGE "Slovak"
-!insertmacro MUI_LANGUAGE "Croatian"
-!insertmacro MUI_LANGUAGE "Bulgarian"
-!insertmacro MUI_LANGUAGE "Hungarian"
-!insertmacro MUI_LANGUAGE "Thai"
-!insertmacro MUI_LANGUAGE "Romanian"
-!insertmacro MUI_LANGUAGE "Latvian"
-!insertmacro MUI_LANGUAGE "Macedonian"
-!insertmacro MUI_LANGUAGE "Estonian"
-!insertmacro MUI_LANGUAGE "Turkish"
-!insertmacro MUI_LANGUAGE "Lithuanian"
-!insertmacro MUI_LANGUAGE "Slovenian"
-!insertmacro MUI_LANGUAGE "Serbian"
-!insertmacro MUI_LANGUAGE "SerbianLatin"
-!insertmacro MUI_LANGUAGE "Arabic"
-!insertmacro MUI_LANGUAGE "Farsi"
-!insertmacro MUI_LANGUAGE "Hebrew"
-!insertmacro MUI_LANGUAGE "Indonesian"
-!insertmacro MUI_LANGUAGE "Mongolian"
-!insertmacro MUI_LANGUAGE "Luxembourgish"
-!insertmacro MUI_LANGUAGE "Albanian"
-!insertmacro MUI_LANGUAGE "Breton"
-!insertmacro MUI_LANGUAGE "Belarusian"
-!insertmacro MUI_LANGUAGE "Icelandic"
-!insertmacro MUI_LANGUAGE "Malay"
-!insertmacro MUI_LANGUAGE "Bosnian"
-!insertmacro MUI_LANGUAGE "Kurdish"
-!insertmacro MUI_LANGUAGE "Irish"
-!insertmacro MUI_LANGUAGE "Uzbek"
-!insertmacro MUI_LANGUAGE "Galician"
-!insertmacro MUI_LANGUAGE "Afrikaans"
-!insertmacro MUI_LANGUAGE "Catalan"
-!insertmacro MUI_LANGUAGE "Esperanto"
-!insertmacro MUI_LANGUAGE "Asturian"
-!insertmacro MUI_LANGUAGE "Basque"
-!insertmacro MUI_LANGUAGE "Pashto"
-!insertmacro MUI_LANGUAGE "ScotsGaelic"
-!insertmacro MUI_LANGUAGE "Georgian"
-!insertmacro MUI_LANGUAGE "Vietnamese"
-!insertmacro MUI_LANGUAGE "Welsh"
-!insertmacro MUI_LANGUAGE "Armenian"
-!insertmacro MUI_LANGUAGE "Corsican"
-!insertmacro MUI_LANGUAGE "Tatar"
-!insertmacro MUI_LANGUAGE "Hindi"
+!insertmacro MUI_LANGUAGE "English"
 
 ;--------------------------------
 
@@ -352,16 +287,13 @@ SectionEnd
 ;------------------------------------
 ; include nice plugins
 
-; NScurl - curl in NSIS
-; used for MSVS redist download
-; extract to ../NSISPlugins/NScurl
-; https://github.com/negrutiu/nsis-nscurl/releases/latest/download/NScurl.zip
-!insertmacro CompileTimeIfFileExist "../NSISPlugins/NScurl/Plugins/" haveNScurl
-!ifdef haveNScurl
-!AddPluginDir /x86-unicode     "../NSISPlugins/NScurl/Plugins/x86-unicode"
-!AddPluginDir /x86-ansi        "../NSISPlugins/NScurl/Plugins/x86-ansi"
-!AddPluginDir /amd64-unicode   "../NSISPlugins/NScurl/Plugins/amd64-unicode"
-!endif
+; NScurl detection (used only by the MSVC-only VC++ redist download section
+; below) is generated conditionally by program_info/CMakeLists.txt, not
+; inlined here. The CompileTimeIfFileExist !system/!tempfile combo it relies
+; on segfaults this NSIS 3.12 build under MSYS2 CLANG64, which is the only
+; toolchain this fork actually packages with - so it must not run unless an
+; MSVC build is what's asking for it.
+@Launcher_NScurl_Plugin_Detect@
 
 ;------------------------------------
 
@@ -389,10 +321,6 @@ Section "@Launcher_DisplayName@"
 
   ; Write the installation path into the registry
   WriteRegStr HKCU Software\@Launcher_CommonName@ "InstallDir" "$INSTDIR"
-
-  ; Write the URL Handler into registry for curseforge
-  WriteRegStr HKCU Software\Classes\curseforge "URL Protocol" ""
-  WriteRegStr HKCU Software\Classes\curseforge\shell\open\command "" '"$INSTDIR\@Launcher_APP_BINARY_NAME@.exe" "%1"'
 
   ; Write the URL Handler into registry for prismlauncher
   WriteRegStr HKCU Software\Classes\@Launcher_APP_BINARY_NAME@ "URL Protocol" ""
@@ -453,8 +381,7 @@ Section /o "Shell Association (Open-With dialog)" SHELL_ASSOC
 
   !insertmacro APP_SETUP `${APPDESCRIPTION}` `${APPICON}` `${APPID}` `${APPCMDTEXT}` `${APPEXE}` `${APPCMDTEXT}` '$INSTDIR\${APPEXE} -I "%1"'
 
-  !insertmacro APP_ASSOCIATE_DEFAULT ".mrpack" `${APPID}` `${APPEXE}` true
-  !insertmacro APP_ASSOCIATE ".zip" `${APPID}` `${APPEXE}` false
+  !insertmacro APP_ASSOCIATE_DEFAULT ".zip" `${APPID}` `${APPEXE}` true
 
   !insertmacro NotifyShell_AssocChanged
 SectionEnd
@@ -475,6 +402,7 @@ Section "Uninstall"
   Delete $INSTDIR\@Launcher_APP_BINARY_NAME@_filelink.exe
   Delete $INSTDIR\@Launcher_APP_BINARY_NAME@_updater.exe
   Delete $INSTDIR\qt.conf
+  Delete $INSTDIR\qtlogging.ini
   Delete $INSTDIR\*.dll
 
   Delete $INSTDIR\uninstall.exe
@@ -498,7 +426,6 @@ Section -un.ShellAssoc
   !insertmacro APP_TEARDOWN_DEFAULT `${APPID}` `${APPNAME}` `${APPEXE}`
 
   !insertmacro APP_UNASSOCIATE ".zip" `${APPID}` `${APPEXE}`
-  !insertmacro APP_UNASSOCIATE ".mrpack" `${APPID}` `${APPEXE}`
 
   !insertmacro NotifyShell_AssocChanged
 SectionEnd

@@ -54,6 +54,14 @@ configure_file(${Launcher_SVGFileName} ${Launcher_SVGFileName} COPYONLY)
 configure_file(${Launcher_AppID}.mime.xml ${Launcher_AppID}.xml COPYONLY)
 
 if(MSVC)
+    set(Launcher_NScurl_Plugin_Detect [=[
+!insertmacro CompileTimeIfFileExist "../NSISPlugins/NScurl/Plugins/" haveNScurl
+!ifdef haveNScurl
+!AddPluginDir /x86-unicode     "../NSISPlugins/NScurl/Plugins/x86-unicode"
+!AddPluginDir /x86-ansi        "../NSISPlugins/NScurl/Plugins/x86-ansi"
+!AddPluginDir /amd64-unicode   "../NSISPlugins/NScurl/Plugins/amd64-unicode"
+!endif
+]=])
     set(Launcher_MSVC_Redist_NSIS_Section [=[
 !ifdef haveNScurl
 Section "Visual Studio Runtime"

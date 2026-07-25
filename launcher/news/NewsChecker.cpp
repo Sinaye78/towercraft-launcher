@@ -49,6 +49,10 @@ NewsChecker::NewsChecker(QNetworkAccessManager* network, const QString& feedUrl)
 
 void NewsChecker::reloadNews()
 {
+    if (m_feedUrl.isEmpty()) {
+        return;
+    }
+
     // Start a netjob to download the RSS feed and call rssDownloadFinished() when it's done.
     if (isLoadingNews()) {
         qDebug() << "Ignored request to reload news. Currently reloading already.";
